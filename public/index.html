@@ -1,0 +1,236 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant Chatbot</title>
+</head>
+<body>
+    <h1>Restaurant AI Assistant</h1>
+    <div id="chat"></div>
+    <input type="text" id="userInput" placeholder="Ask about the menu..." />
+    <button onclick="sendMessage()">Send</button>
+</body>
+
+<script>
+    async function sendMessage() {
+        const input = document.getElementById('userInput').value;
+    const res = await fetch("/api/chat", {
+        method: "POST", 
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body:JSON.stringify({ message: input }),
+    })
+
+    const data = await res.json();
+    const chatDiv = document.getElementById('chat');
+    chatDiv.innerHTML += `You: ${input}\n Bot: ${data.output}\n\n`;
+
+    document.getElementById('userInput').value = '';
+    }
+</script>
+</html> -->
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gourmet AI - Your Restaurant Assistant</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* For the message fade-in animation */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .chat-message {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        /* Custom scrollbar for a cleaner look */
+        #chat-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        #chat-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #chat-container::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            border: 3px solid transparent;
+        }
+        
+        /* Typing indicator dots animation */
+        .typing-dot {
+            animation: typing-blink 1.4s infinite both;
+        }
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        @keyframes typing-blink {
+            0% { opacity: 0.2; }
+            20% { opacity: 1; }
+            100% { opacity: 0.2; }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-white">
+
+    <div class="fixed inset-0 z-0">
+        <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=2574&auto=format&fit=crop" 
+             alt="Cozy restaurant interior" 
+             class="w-full h-full object-cover filter blur-sm opacity-30">
+        <div class="absolute inset-0 bg-black/50"></div>
+    </div>
+
+    <div class="relative z-10 flex flex-col h-screen max-w-2xl mx-auto p-4 md:p-6">
+        
+        <header class="flex-shrink-0 mb-4 text-center">
+            <h1 class="text-3xl font-bold text-amber-400">Gourmet AI</h1>
+            <p class="text-gray-400">Your personal guide to our menu</p>
+        </header>
+
+        <div id="chat-container" class="flex-grow bg-black/30 backdrop-blur-md rounded-xl p-6 overflow-y-auto space-y-6">
+            <div class="chat-message flex">
+                <div class="bg-gray-700 text-gray-200 rounded-lg p-4 max-w-xs lg:max-w-md">
+                    <p>Welcome! How can I assist you with our menu today? You can ask about specials, ingredients, or pairings.</p>
+                </div>
+            </div>
+        </div>
+
+        <footer class="flex-shrink-0 mt-6">
+            <form id="chat-form" class="flex items-center bg-gray-800 rounded-full p-2">
+                <input type="text" id="userInput" placeholder="Ask about the 'Risotto'..." 
+                       class="flex-grow bg-transparent text-gray-200 placeholder-gray-500 focus:outline-none px-4"
+                       autocomplete="off">
+                <button type="submit" class="bg-amber-500 hover:bg-amber-600 transition-colors rounded-full p-3 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-gray-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                    </svg>
+                </button>
+            </form>
+        </footer>
+    </div>
+
+    <script>
+        const chatForm = document.getElementById('chat-form');
+        const userInput = document.getElementById('userInput');
+        const chatContainer = document.getElementById('chat-container');
+
+        // Listen for form submission
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            sendMessage();
+        });
+
+        // Main function to handle sending messages
+        async function sendMessage() {
+            const messageText = userInput.value.trim();
+            if (messageText === '') return;
+
+            // 1. Add user's message to the chat immediately
+            addMessage(messageText, 'user');
+            userInput.value = '';
+
+            // 2. Show a "typing" indicator
+            showTypingIndicator();
+
+            try {
+                // 3. Send message to the API
+                const res = await fetch("/api/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: messageText }),
+                });
+
+                if (!res.ok) {
+                    throw new Error(`API Error: ${res.statusText}`);
+                }
+
+                const data = await res.json();
+                
+                // 4. Remove typing indicator and add bot's response
+                removeTypingIndicator();
+                addMessage(data.output, 'bot');
+
+            } catch (error) {
+                console.error("Failed to get response:", error);
+                removeTypingIndicator();
+                addMessage("I'm sorry, I'm having trouble connecting right now. Please try again later.", 'bot');
+            }
+        }
+
+        // Helper function to create and append message elements
+        function addMessage(text, sender) {
+            const messageWrapper = document.createElement('div');
+            messageWrapper.className = 'chat-message flex';
+
+            const messageBubble = document.createElement('div');
+            messageBubble.className = 'rounded-lg p-4 max-w-xs lg:max-w-md';
+            messageBubble.textContent = text;
+            
+            if (sender === 'user') {
+                messageWrapper.classList.add('justify-end');
+                messageBubble.classList.add('bg-amber-500', 'text-white');
+            } else {
+                messageWrapper.classList.add('justify-start');
+                messageBubble.classList.add('bg-gray-700', 'text-gray-200');
+            }
+
+            messageWrapper.appendChild(messageBubble);
+            chatContainer.appendChild(messageWrapper);
+            
+            // Auto-scroll to the bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // Functions to manage the typing indicator
+        function showTypingIndicator() {
+            const typingIndicator = document.createElement('div');
+            typingIndicator.id = 'typing-indicator';
+            typingIndicator.className = 'chat-message flex';
+            typingIndicator.innerHTML = `
+                <div class="bg-gray-700 rounded-lg p-4 flex items-center space-x-2">
+                    <div class="typing-dot h-2 w-2 bg-gray-400 rounded-full"></div>
+                    <div class="typing-dot h-2 w-2 bg-gray-400 rounded-full"></div>
+                    <div class="typing-dot h-2 w-2 bg-gray-400 rounded-full"></div>
+                </div>
+            `;
+            chatContainer.appendChild(typingIndicator);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('typing-indicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+    </script>
+</body>
+</html>
