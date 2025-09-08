@@ -8,6 +8,8 @@ import { DynamicStructuredTool } from 'langchain/tools';
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { z } from "zod";
 
+import { menuData } from './menuData.js'; 
+
 dotenv.config();
 const port = 3000;
 const app = express();
@@ -22,30 +24,55 @@ const model = new ChatGoogleGenerativeAI({
   apiKey: process.env.GOOGLE_API_KEY,
 });
 
+// const getMenuTool = new DynamicStructuredTool({
+//   name: 'getMenuTool',
+//   description:
+//     "return the final answer for today's menu for the given category {Breakfast, lunch, dinner}. Use this tool to directly answer the user menu question",
+//   schema: z.object({
+//     category: z.string().describe("Type of food. Example: Breakfast, lunch, dinner"),
+//   }),
+
+//   func: async ({ category }) => {
+//     const menu = {
+//       breakfast:
+//         "Pancakes, Omelette, Fruit Salad, Coffee, Poha, Aloo Paratha, Masala Dosa, Masala Chai",
+//       lunch:
+//         "Grilled Chicken, Caesar Salad, Veggie Wrap, Lemonade, Paneer Butter Masala, Dal Makhani, Naan, Gulab Jamun",
+//       dinner:
+//         "Steak, Roasted Vegetables, Mashed Potatoes, Red Wine, Butter Chicken, Biryani, Raita, Kheer",
+//     };
+
+//     return menu[category.toLowerCase()] || "Sorry, we don't have a menu for that category.";
+//   },
+// });
+
+
+
 const getMenuTool = new DynamicStructuredTool({
   name: 'getMenuTool',
   description:
-    "return the final answer for today's menu for the given category {Breakfast, lunch, dinner}. Use this tool to directly answer the user menu question",
+    "Return today's menu for a given cuisine and category (e.g., Indian breakfast, Italian dinner).",
   schema: z.object({
-    category: z.string().describe("Type of food. Example: Breakfast, lunch, dinner"),
+    cuisine: z.string().describe("Cuisine type. Example: Indian, Italian, Chinese, American"),
+    category: z.string().describe("Type of food. Example: Breakfast, lunch, dinner, snacks, desserts, beverages"),
   }),
+  func: async ({ cuisine, category }) => {
+    const cuisineData = menuData[cuisine.toLowerCase()];
+    if (!cuisineData) return `Sorry, we don't have a menu for ${cuisine}.`;
 
-  func: async ({ category }) => {
-    const menu = {
-      breakfast:
-        "Pancakes, Omelette, Fruit Salad, Coffee, Poha, Aloo Paratha, Masala Dosa, Masala Chai",
-      lunch:
-        "Grilled Chicken, Caesar Salad, Veggie Wrap, Lemonade, Paneer Butter Masala, Dal Makhani, Naan, Gulab Jamun",
-      dinner:
-        "Steak, Roasted Vegetables, Mashed Potatoes, Red Wine, Butter Chicken, Biryani, Raita, Kheer",
-    };
+    const items = cuisineData[category.toLowerCase()];
+    if (!items) return `Sorry, we don't have a ${category} menu for ${cuisine}.`;
 
-    return menu[category.toLowerCase()] || "Sorry, we don't have a menu for that category.";
+    return items.join(", ");
   },
+
 });
 
 const prompt = ChatPromptTemplate.fromMessages([
-  ["system", "You are a helpful restaurant menu assistant. Use the tool to get today's menu based on the user's request."],
+ ["system", `You are a helpful restaurant menu assistant.
+- Use the tool ONLY when you need to fetch a menu.
+- Once you have the result from the tool, return it directly to the user as your final answer.
+- Do not call the tool repeatedly with the same input.`],
   ["human", "{input}"],
   ["ai", "{agent_scratchpad}"],
 ]);
@@ -60,8 +87,8 @@ const executor = await AgentExecutor.fromAgentAndTools({
   agent,
   tools: [getMenuTool],
   verbose: true,
-  maxIterations: 5,
-  returnIntermediateSteps: true,
+  maxIterations: 10,
+  returnIntermediateSteps: false,
 });
 
 app.get('/', (req, res) => {
